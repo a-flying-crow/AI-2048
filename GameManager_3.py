@@ -45,16 +45,21 @@ class GameManager:
        ## print(currTime-self.prevTime)
         if currTime - self.prevTime > timeLimit + allowance:
            ## print(currTime-self.prevTime)##0.2+0.05
-            self.over = True
+            self.over = False
         else:
-            while time.clock() - self.prevTime < timeLimit + allowance:
+            while time.perf_counter() - self.prevTime < timeLimit + allowance:
                 pass
 
-            self.prevTime = time.clock()
+            self.prevTime = time.perf_counter()
 
     def start(self):
         for i in range(self.initTiles):##range(2)，在开始的时候首先放进去几个值此时为2个
-            self.insertRandonTile()
+            ##self.insertRandonTile()
+            x=int(input())
+            y=int(input())
+            scores=int(input())
+            self.insertMyChoice(x,y,scores)
+
 
         self.displayer.display(self.grid)
 
@@ -62,7 +67,7 @@ class GameManager:
         turn = PLAYER_TURN
         maxTile = 0
 
-        self.prevTime = time.clock()
+        self.prevTime = time.perf_counter()
 
         while not self.isGameOver() and not self.over:
             # Copy to Ensure AI Cannot Change the Real Grid to Cheat
@@ -93,11 +98,13 @@ class GameManager:
                     self.over = True
             else:
                 print("Computer's turn:")
-                move = self.computerAI.getMove(gridCopy)
+                x=int(input())
+                y=int(input())
+                move=[x,y]
 
                 # Validate Move
                 if move and self.grid.canInsert(move):
-                    self.grid.setCellValue(move, self.getNewTileValue())
+                    self.grid.setCellValue(move, int(input()))
                 else:
                     print("Invalid Computer AI Move")
                     self.over = True
@@ -106,7 +113,7 @@ class GameManager:
                 self.displayer.display(self.grid)
 
             # Exceeding the Time Allotted for Any Turn Terminates the Game
-            self.updateAlarm(time.clock())
+            self.updateAlarm(time.perf_counter())
             print(self.over)
 
             turn = 1 - turn
@@ -122,12 +129,19 @@ class GameManager:
             return self.possibleNewTiles[0]
         else:
             return self.possibleNewTiles[1];
+    def getNewMyScores(x,y,Scores):
+        return Scores
 
     def insertRandonTile(self):
         tileValue = self.getNewTileValue()
         cells = self.grid.getAvailableCells()
         cell = cells[randint(0, len(cells) - 1)]
         self.grid.setCellValue(cell, tileValue)
+
+    def insertMyChoice(self,x,y,scores):
+        ##选手指定放的位置以及数字
+        tileValue=scores
+        self.grid.setCellValue([x,y],scores)
 
 def main():
     gameManager = GameManager()
