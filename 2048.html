@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2048 Game with Smooth Transition</title>
+  <style>
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(4, 100px); 
+      gap: 10px; 
+    }
+    .cell { 
+      width: 100px; 
+      height: 100px; 
+      background-color: #ccc; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      font-size: 24px; 
+      cursor: pointer; 
+      transition: transform 0.2s ease, background-color 0.2s ease; /* 平滑过渡效果 */
+    }
+    .merge { 
+      animation: mergeAnimation 0.2s; /* 合并动画 */
+    }
+    @keyframes mergeAnimation {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid" id="grid"></div>
+  <button class="button" onclick="initializeGame()">Initialize Complete</button>
+  <div id="nextMove">Next Move: </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    let board = Array(4).fill().map(() => Array(4).fill(0));
+    let initializing = true;
+
+    function renderBoard() {
+      grid.innerHTML = '';
+      board.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+          const cellDiv = document.createElement('div');
+          cellDiv.className = 'cell';
+          cellDiv.innerText = cell > 0 ? cell : '';
+
+          // 动画效果
+          if (cell > 0) {
+            cellDiv.classList.add('merge');
+            cellDiv.style.backgroundColor = `rgba(250, 200, 150, ${0.1 + Math.log2(cell) / 10})`;
+          }
+          
+          // 初始化模式：允许设置初始棋子
+          if (initializing) {
+            cellDiv.addEventListener('click', () => setInitialTile(rowIndex, colIndex));
+          } else {
+            // 正常模式：允许点击空白格生成新棋子
+            if (cell === 0) {
+              cellDiv.addEventListener('click', () => generateTile(rowIndex, colIndex));
+            }
+          }
+          grid.appendChild(cellDiv);
+        });
+      });
+    }
+
+    function setInitialTile(row, col) {
+      const value = parseInt(prompt("Enter initial tile value (e.g., 2, 4, 8, 16, ...):"), 10);
+      if (value > 0 && (value & (value - 1)) === 0) {
+        board[row][col] = value;
+        renderBoard();
+      } else {
+        alert("Invalid input! Please enter a power of 2 (e.g., 2, 4, 8, 16, ...).");
+      }
+    }
+
+    async function initializeGame() {
+      initializing = false;
+      renderBoard();
+      
+      const response = await fetch('http://localhost:5000/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ board })
+      });
+
+      const data = await response.json();
+      board = data.boardState;
+      document.getElementById('nextMove').innerText = `Next Move: ${data.nextMove}`;
+      renderBoard();
+    }
+
+    async function generateTile(row, col) {
+      const value = parseInt(prompt("Enter a tile value (e.g., 2, 4, 8, 16, ...):"), 10);
+      if (value > 0 && (value & (value - 1)) === 0) {
+        board[row][col] = value;
+        const response = await fetch('http://localhost:5000/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ board, newTile: { row, col, value } })
+        });
+
+        const data = await response.json();
+        
+        // 更新前的短暂延迟用于播放移动动画
+        setTimeout(() => {
+          board = data.boardState;
+          document.getElementById('nextMove').innerText = `Next Move: ${data.nextMove}`;
+          renderBoard();
+        }, 200);  // 200ms的延迟用于平滑动画
+      } else {
+        alert("Invalid input! Please enter a power of 2 (e.g., 2, 4, 8, 16, ...).");
+      }
+    }
+
+    renderBoard();
+  </script>
+</body>
+</html>
